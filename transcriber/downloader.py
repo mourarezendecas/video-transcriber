@@ -20,7 +20,15 @@ def download_video(url: str, dest_dir: Path) -> Path:
     dest_dir.mkdir(parents=True, exist_ok=True)
 
     if _is_google_drive_url(url):
-        destino_str = gdown.download(url=url, output=f"{dest_dir}/", quiet=False, fuzzy=True)
+        try:
+            # gdown < 6: precisa de fuzzy=True para aceitar a URL de
+            # compartilhamento completa (em vez de só o ID do arquivo).
+            destino_str = gdown.download(url=url, output=f"{dest_dir}/", quiet=False, fuzzy=True)
+        except TypeError:
+            # gdown >= 6: removeu o parâmetro 'fuzzy' — o reconhecimento da
+            # URL de compartilhamento passou a ser automático.
+            destino_str = gdown.download(url=url, output=f"{dest_dir}/", quiet=False)
+
         if not destino_str:
             raise RuntimeError(
                 f"Falha ao baixar do Google Drive: {url}\n"

@@ -270,7 +270,9 @@ class App:
             self.fila_log.put(("__sucesso__", str(caminho_final)))
 
         except Exception as exc:
-            self.fila_log.put(("__erro__", str(exc)))
+            mensagem = f"{type(exc).__name__}: {exc}"
+            self.fila_log.put(f"❌ ERRO: {mensagem}")
+            self.fila_log.put(("__erro__", mensagem))
         finally:
             sys.stdout = stdout_original
 
@@ -305,10 +307,12 @@ class App:
         self.processando = False
         self._alternar_botoes(ativo=True)
         if sucesso:
+            self._log("--- Concluído ---")
             self.var_status.set("Concluído!")
             messagebox.showinfo("Concluído", f"Transcrição salva em:\n{caminho}")
         else:
-            self.var_status.set("Ocorreu um erro.")
+            self._log("--- Processamento interrompido por erro ---")
+            self.var_status.set("❌ Ocorreu um erro. Veja o Andamento ou a mensagem abaixo.")
             messagebox.showerror("Erro", f"Ocorreu um erro durante o processamento:\n\n{mensagem_erro}")
 
     def _abrir_pasta_saida(self):
