@@ -1,32 +1,81 @@
 # video-transcriber
 
-Extrai o áudio de vídeos `.mp4`, transcreve com Whisper (local, via
+Extrai o áudio de vídeos, transcreve com Whisper (local, via
 [faster-whisper](https://github.com/SYSTRAN/faster-whisper)) e, opcionalmente,
 revisa o texto (pontuação, gramática, parágrafos) usando a API da OpenAI ou
-da DeepSeek.
+da DeepSeek. Tem uma interface gráfica simples para quem não é técnico, e um
+modo de linha de comando para uso mais avançado.
 
 > OpenAI e DeepSeek aqui são modelos de texto — eles não fazem transcrição de
 > áudio. Quem transcreve é o Whisper, rodando localmente na sua máquina. O
 > modelo de texto entra só depois, para deixar o texto mais limpo e organizado
 > em parágrafos.
 
-## Requisitos
+---
+
+## Para quem só vai usar o programa (sem conhecimento técnico)
+
+Isso aqui pressupõe que alguém já fez a "Configuração inicial" (mais abaixo)
+nesse computador uma vez. Se a pasta `.venv` já existe dentro da pasta do
+projeto, está tudo pronto.
+
+### 1. Abrir o programa
+
+Dentro da pasta `video-transcriber`, dê **duplo-clique em `iniciar.bat`**.
+Uma janela chamada "Transcritor de Vídeos" vai abrir.
+
+### 2. Configurar as chaves de API (só na primeira vez)
+
+No topo da janela, cole sua chave da OpenAI e/ou da DeepSeek nos campos
+correspondentes e clique em **"Salvar chaves"**. Isso só precisa ser feito
+uma vez — as chaves ficam salvas no computador para as próximas vezes que
+você abrir o programa. Você só precisa preencher a chave do serviço que for
+usar (o padrão é OpenAI).
+
+### 3. Escolher o vídeo
+
+Você tem duas opções:
+
+- **🔗 Usar link do Google Drive**: clique no botão, cole o link de
+  compartilhamento do vídeo quando for solicitado, e confirme.
+- **📁 Selecionar arquivo do computador**: clique no botão e escolha o
+  arquivo de vídeo pelo explorador de arquivos do Windows que vai abrir.
+
+O processamento começa automaticamente assim que você escolhe o vídeo. Você
+pode acompanhar o andamento na caixa "Andamento", na parte de baixo da
+janela. Vídeos mais longos podem demorar bastante — isso é esperado.
+
+### 4. Pegar o resultado
+
+Quando terminar, aparece um aviso na tela com o caminho do arquivo. A
+transcrição final fica salva na pasta **Documentos\Transcricoes** do seu
+usuário do Windows. Você também pode clicar em **"Abrir pasta de
+transcrições"**, no canto inferior direito da janela, para chegar lá
+diretamente.
+
+> **Importante sobre privacidade:** se você usar um link do Google Drive, o
+> vídeo é baixado apenas temporariamente para processar o áudio, e é apagado
+> automaticamente assim que a transcrição termina. Nada além do texto final
+> fica salvo no computador. Se você escolher um arquivo já salvo no
+> computador, o programa só lê esse arquivo — ele não é copiado nem apagado.
+
+---
+
+## Configuração inicial (técnica, feita uma vez por computador)
+
+### Requisitos
 
 - Python 3.10 ou superior.
 - Não é necessário instalar o ffmpeg manualmente: a biblioteca
   `imageio-ffmpeg` baixa um binário próprio automaticamente no primeiro uso,
   em qualquer sistema operacional.
 
-## Setup
-
-Clone o repositório e entre na pasta:
+### Clonar e instalar
 
 ```bash
 git clone https://github.com/mourarezendecas/video-transcriber.git
 cd video-transcriber
 ```
-
-### Ambiente virtual
 
 **Linux / macOS**
 
@@ -61,10 +110,14 @@ copy .env.example .env
 Em todos os casos, quando o ambiente estiver ativo o prompt mostra `(.venv)`
 no início da linha. Para desativar, rode `deactivate`.
 
-### Chave de API
+A partir daqui, o programa já pode ser aberto com `iniciar.bat` (Windows) —
+veja a seção "Para quem só vai usar o programa", acima — ou usado por linha
+de comando, como descrito a seguir.
 
-Edite o `.env` e coloque sua chave de API (opcional, só necessário se você
-quiser a etapa de revisão do texto):
+### Chave de API (opcional via `.env`)
+
+As chaves também podem ser configuradas direto pela interface gráfica (veja
+acima). Se preferir configurar por arquivo, edite o `.env`:
 
 ```
 OPENAI_API_KEY=sua_chave_aqui
@@ -74,7 +127,12 @@ DEEPSEEK_API_KEY=sua_chave_aqui
 Só precisa configurar a chave do provedor que for usar (o padrão é OpenAI).
 **Nunca commite o arquivo `.env`** — ele já está no `.gitignore`.
 
-## Uso
+---
+
+## Uso por linha de comando (avançado)
+
+Além da interface gráfica, dá para rodar tudo pelo terminal — útil para
+processar vários vídeos de uma vez ou automatizar.
 
 1. Coloque um ou mais arquivos `.mp4` na pasta `input/`.
 2. Rode:
@@ -87,6 +145,10 @@ python main.py
    - `<nome>.wav` — áudio extraído
    - `<nome>.txt` — transcrição bruta do Whisper
    - `<nome>_revisado.txt` — versão revisada e formatada em parágrafos pelo modelo de texto (se configurada)
+
+Diferente da interface gráfica, o modo de linha de comando **mantém** o
+áudio extraído (`.wav`) em `output/` — útil para depuração. Se quiser o
+comportamento "só o texto fica salvo", use a interface gráfica.
 
 ### Baixar o vídeo de uma URL (ex.: Google Drive)
 
@@ -117,6 +179,7 @@ python main.py --url "..."            # baixa um vídeo da URL antes de processa
 Na primeira execução, o `faster-whisper` baixa o modelo escolhido (alguns
 GBs para `medium`/`large`) e o `imageio-ffmpeg` baixa um binário do ffmpeg —
 ambos ficam em cache local (fora do repositório) para as próximas execuções.
+Isso vale tanto pela linha de comando quanto pela interface gráfica.
 
 ### Revisar um .txt já transcrito
 
@@ -133,14 +196,16 @@ python refine_only.py --provider deepseek # usa a DeepSeek em vez da OpenAI
 
 ```
 video-transcriber/
-├── input/              # coloque os .mp4 aqui (ignorado pelo git)
-├── output/              # .wav, .txt e _revisado.txt saem aqui (ignorado pelo git)
+├── input/               # (modo linha de comando) coloque os .mp4 aqui — ignorado pelo git
+├── output/               # (modo linha de comando) .wav, .txt e _revisado.txt saem aqui — ignorado pelo git
 ├── transcriber/
-│   ├── downloader.py         # baixa vídeo de uma URL (ex.: Google Drive) para input/
+│   ├── downloader.py         # baixa vídeo de uma URL (ex.: Google Drive)
 │   ├── audio_extractor.py   # extrai áudio com ffmpeg (via imageio-ffmpeg)
 │   ├── transcribe.py        # transcreve com faster-whisper, localmente
 │   └── refine.py            # revisa/formata o texto via OpenAI ou DeepSeek
-├── main.py               # pipeline completo: vídeo → áudio → transcrição → revisão
+├── gui.py                 # interface gráfica (uso do dia a dia)
+├── iniciar.bat             # atalho para abrir a interface gráfica no Windows
+├── main.py               # pipeline por linha de comando: vídeo → áudio → transcrição → revisão
 ├── refine_only.py         # roda só a revisão em um .txt já existente
 ├── requirements.txt
 └── .env.example
@@ -148,7 +213,15 @@ video-transcriber/
 
 ## Privacidade
 
-Os vídeos (`input/`), áudios extraídos e transcrições (`output/`) ficam só na
-sua máquina e nunca são commitados — ambas as pastas estão no `.gitignore`.
-A única informação enviada para fora é o texto da transcrição, e só na etapa
-de revisão (para a API da OpenAI ou DeepSeek, conforme o provedor escolhido).
+- **Interface gráfica (`gui.py` / `iniciar.bat`)**: vídeo e áudio são
+  processados numa pasta temporária que é apagada automaticamente ao final
+  de cada transcrição — só o texto final é mantido, salvo em
+  `Documentos\Transcricoes`. Isso vale tanto para um arquivo baixado do
+  Google Drive quanto para o áudio extraído de um arquivo local (o arquivo
+  de vídeo local em si não é copiado nem apagado).
+- **Linha de comando (`main.py`)**: os vídeos (`input/`), áudios extraídos e
+  transcrições (`output/`) ficam salvos na sua máquina — nenhuma das duas
+  pastas é commitada (estão no `.gitignore`).
+- Em ambos os modos, a única informação enviada para fora da sua máquina é o
+  texto da transcrição, e só na etapa de revisão (para a API da OpenAI ou
+  DeepSeek, conforme o provedor escolhido).
