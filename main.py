@@ -5,6 +5,7 @@ Uso:
     python main.py
     python main.py --model small --no-refine
     python main.py --language en
+    python main.py --url "https://drive.google.com/file/d/xxxxx/view"
 """
 
 import argparse
@@ -16,6 +17,7 @@ from dotenv import load_dotenv
 from transcriber.audio_extractor import extract_audio
 from transcriber.transcribe import transcribe_audio
 from transcriber.refine import refine_transcript
+from transcriber.downloader import download_video
 
 INPUT_DIR = Path(__file__).parent / "input"
 OUTPUT_DIR = Path(__file__).parent / "output"
@@ -45,6 +47,15 @@ def parse_args() -> argparse.Namespace:
         default="openai",
         help="Provedor usado para revisar o texto (padrão: openai).",
     )
+    parser.add_argument(
+        "--url",
+        default=None,
+        help=(
+            "URL de um vídeo para baixar e processar (ex.: link de "
+            "compartilhamento do Google Drive), além dos arquivos já "
+            "presentes em input/."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -56,8 +67,16 @@ def main() -> None:
     videos = sorted(
         p for p in INPUT_DIR.iterdir() if p.suffix.lower() in VIDEO_EXTENSIONS
     )
+
+    if args.url:
+        print(f"\nBaixando vídeo de: {args.url}")
+        video_baixado = download_video(args.url, INPUT_DIR)
+        print(f"Vídeo baixado em {video_baixado}")
+        if video_baixado not in videos:
+            videos.append(video_baixado)
+
     if not videos:
-        print(f"Nenhum arquivo .mp4 encontrado em {INPUT_DIR}")
+        print(f"Nenhum arquivo .mp4 encontrado em {INPUT_DIR} nem fornecido via --url")
         return
 
     fazer_refino = not args.no_refine

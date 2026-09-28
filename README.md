@@ -88,6 +88,21 @@ python main.py
    - `<nome>.txt` — transcrição bruta do Whisper
    - `<nome>_revisado.txt` — versão revisada e formatada em parágrafos pelo modelo de texto (se configurada)
 
+### Baixar o vídeo de uma URL (ex.: Google Drive)
+
+Em vez de (ou além de) colocar o arquivo manualmente em `input/`, dá pra
+passar a URL do vídeo e o script baixa antes de processar:
+
+```bash
+python main.py --url "https://drive.google.com/file/d/XXXXXXXXXXXX/view?usp=sharing"
+```
+
+O vídeo baixado é salvo em `input/` (com o nome original do arquivo) e é
+processado normalmente pelo mesmo pipeline, junto com qualquer outro `.mp4`
+que já esteja na pasta. Funciona com links de compartilhamento do Google
+Drive (o arquivo precisa estar como "Qualquer pessoa com o link pode
+visualizar") ou com uma URL direta de download de outro servidor.
+
 ### Opções
 
 ```bash
@@ -96,6 +111,7 @@ python main.py --language en          # idioma do áudio (padrão: pt)
 python main.py --language auto        # detecção automática de idioma
 python main.py --no-refine            # pula a revisão por LLM
 python main.py --provider deepseek    # usa a DeepSeek em vez da OpenAI para revisar
+python main.py --url "..."            # baixa um vídeo da URL antes de processar
 ```
 
 Na primeira execução, o `faster-whisper` baixa o modelo escolhido (alguns
@@ -120,6 +136,7 @@ video-transcriber/
 ├── input/              # coloque os .mp4 aqui (ignorado pelo git)
 ├── output/              # .wav, .txt e _revisado.txt saem aqui (ignorado pelo git)
 ├── transcriber/
+│   ├── downloader.py         # baixa vídeo de uma URL (ex.: Google Drive) para input/
 │   ├── audio_extractor.py   # extrai áudio com ffmpeg (via imageio-ffmpeg)
 │   ├── transcribe.py        # transcreve com faster-whisper, localmente
 │   └── refine.py            # revisa/formata o texto via OpenAI ou DeepSeek
