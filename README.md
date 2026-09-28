@@ -32,6 +32,14 @@ uma vez — as chaves ficam salvas no computador para as próximas vezes que
 você abrir o programa. Você só precisa preencher a chave do serviço que for
 usar (o padrão é OpenAI).
 
+Ao lado de cada campo aparece um indicador validando a chave de verdade
+(faz uma chamadinha real à API, não só confere se o campo está preenchido):
+🟡 verificando... → 🟢 válida ou 🔴 inválida. Isso acontece automaticamente
+toda vez que o programa abre (para chaves já salvas) e toda vez que você
+clica em "Salvar chaves". Se a chave usada para revisar o texto estiver
+inválida, o programa também recusa iniciar o download/transcrição e avisa
+o motivo, antes de gastar tempo processando o vídeo.
+
 ### 3. Escolher o vídeo
 
 Você tem duas opções:
@@ -202,7 +210,8 @@ video-transcriber/
 │   ├── downloader.py         # baixa vídeo de uma URL (ex.: Google Drive)
 │   ├── audio_extractor.py   # extrai áudio com ffmpeg (via imageio-ffmpeg)
 │   ├── transcribe.py        # transcreve com faster-whisper, localmente
-│   └── refine.py            # revisa/formata o texto via OpenAI ou DeepSeek
+│   ├── refine.py            # revisa/formata o texto via OpenAI ou DeepSeek
+│   └── api_validator.py      # valida chaves de API com uma chamada mínima real
 ├── gui.py                 # interface gráfica (uso do dia a dia)
 ├── iniciar.bat             # atalho para abrir a interface gráfica no Windows
 ├── main.py               # pipeline por linha de comando: vídeo → áudio → transcrição → revisão

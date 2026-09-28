@@ -19,6 +19,7 @@ from tkinter import filedialog, messagebox, scrolledtext, simpledialog, ttk
 
 from dotenv import dotenv_values, load_dotenv, set_key
 
+from transcriber.api_validator import validar_api_key
 from transcriber.audio_extractor import extract_audio
 from transcriber.downloader import download_video
 from transcriber.refine import refine_transcript
@@ -89,18 +90,26 @@ class App:
 
         ttk.Label(config, text="OpenAI API Key:").grid(row=0, column=0, sticky="w", padx=6, pady=4)
         self.var_openai = tk.StringVar()
-        ttk.Entry(config, textvariable=self.var_openai, show="*", width=45).grid(
+        ttk.Entry(config, textvariable=self.var_openai, show="*", width=40).grid(
             row=0, column=1, padx=6, pady=4
+        )
+        self.var_status_openai = tk.StringVar(value="")
+        tk.Label(config, textvariable=self.var_status_openai, width=16, anchor="w").grid(
+            row=0, column=2, padx=4, pady=4
         )
 
         ttk.Label(config, text="DeepSeek API Key:").grid(row=1, column=0, sticky="w", padx=6, pady=4)
         self.var_deepseek = tk.StringVar()
-        ttk.Entry(config, textvariable=self.var_deepseek, show="*", width=45).grid(
+        ttk.Entry(config, textvariable=self.var_deepseek, show="*", width=40).grid(
             row=1, column=1, padx=6, pady=4
+        )
+        self.var_status_deepseek = tk.StringVar(value="")
+        tk.Label(config, textvariable=self.var_status_deepseek, width=16, anchor="w").grid(
+            row=1, column=2, padx=4, pady=4
         )
 
         ttk.Button(config, text="Salvar chaves", command=self._salvar_chaves).grid(
-            row=0, column=2, rowspan=2, padx=8
+            row=0, column=3, rowspan=2, padx=8
         )
 
         opcoes = ttk.LabelFrame(self.root, text="Opções da transcrição")
@@ -165,12 +174,38 @@ class App:
             self.var_openai.set(valores.get("OPENAI_API_KEY") or "")
             self.var_deepseek.set(valores.get("DEEPSEEK_API_KEY") or "")
 
+        # Valida as chaves já salvas assim que o app abre.
+        if self.var_openai.get().strip():
+            self._validar_chave_em_background("openai", self.var_openai.get())
+        if self.var_deepseek.get().strip():
+            self._validar_chave_em_background("deepseek", self.var_deepseek.get())
+
     def _salvar_chaves(self):
         if not ENV_PATH.exists():
             ENV_PATH.touch()
         set_key(str(ENV_PATH), "OPENAI_API_KEY", self.var_openai.get().strip())
         set_key(str(ENV_PATH), "DEEPSEEK_API_KEY", self.var_deepseek.get().strip())
         messagebox.showinfo("Chaves salvas", "As chaves de API foram salvas com sucesso.")
+
+        # Valida as chaves recém-salvas.
+        if self.var_openai.get().strip():
+            self._validar_chave_em_background("openai", self.var_openai.get())
+        else:
+            self.var_status_openai.set("")
+        if self.var_deepseek.get().strip():
+            self._validar_chave_em_background("deepseek", self.var_deepseek.get())
+        else:
+            self.var_status_deepseek.set("")
+
+    def _validar_chave_em_background(self, provider: str, chave: str):
+        status_var = self.var_status_openai if provider == "openai" else self.var_status_deepseek
+        status_var.set("🟡 verificando...")
+
+        def worker():
+            valida, mensagem = validar_api_key(chave, provider)
+            self.fila_log.put(("__validacao__", provider, valida, mensagem))
+
+        threading.Thread(target=worker, daemon=True).start()
 
     # ---------- seleção da fonte do vídeo ----------
 
@@ -233,6 +268,16 @@ class App:
         stdout_original = sys.stdout
         sys.stdout = TextoRedirecionado(self.fila_log)
         try:
+            if revisar:
+                print(f"Validando chave de API da {provider}...")
+                valida, mensagem = validar_api_key(api_key, provider)
+                if not valida:
+                    raise RuntimeError(
+                        f"Chave de API da {provider} inválida: {mensagem} "
+                        "Corrija a chave em 'Configuração das chaves de API' antes de continuar."
+                    )
+                print("Chave validada com sucesso.")
+
             OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
             with tempfile.TemporaryDirectory(prefix="video_transcriber_") as tmp:
@@ -291,6 +336,8 @@ class App:
                     self._finalizar(sucesso=True, caminho=item[1])
                 elif isinstance(item, tuple) and item[0] == "__erro__":
                     self._finalizar(sucesso=False, mensagem_erro=item[1])
+                elif isinstance(item, tuple) and item[0] == "__validacao__":
+                    self._atualizar_status_validacao(item[1], item[2], item[3])
                 else:
                     self._log(item)
         except queue.Empty:
@@ -314,6 +361,14 @@ class App:
             self._log("--- Processamento interrompido por erro ---")
             self.var_status.set("❌ Ocorreu um erro. Veja o Andamento ou a mensagem abaixo.")
             messagebox.showerror("Erro", f"Ocorreu um erro durante o processamento:\n\n{mensagem_erro}")
+
+    def _atualizar_status_validacao(self, provider: str, valida: bool, mensagem: str):
+        status_var = self.var_status_openai if provider == "openai" else self.var_status_deepseek
+        if valida:
+            status_var.set("🟢 válida")
+        else:
+            status_var.set("🔴 inválida")
+            self._log(f"Chave {provider}: {mensagem}")
 
     def _abrir_pasta_saida(self):
         OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
