@@ -1,0 +1,14 @@
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.env
+.DS_Store
+
+# arquivos de entrada/saída do usuário não devem ir pro git
+# (podem conter vídeos, áudios e transcrições de conteúdo do usuário)
+input/*
+output/*
+!input/.gitkeep
+!output/.gitkeep
