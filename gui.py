@@ -3,13 +3,14 @@
 Permite configurar as chaves de API (OpenAI/DeepSeek), escolher entre um
 vídeo do Google Drive (por link) ou um arquivo local, e acompanhar o
 andamento da transcrição. Nenhum vídeo ou áudio fica salvo permanentemente —
-apenas o texto final, em Documentos\\Transcricoes.
+apenas o texto final, na pasta "Transcricoes" dentro da pasta do projeto.
 
 Uso: python gui.py  (ou dando duplo-clique em iniciar.bat)
 """
 
 import os
 import queue
+import subprocess
 import sys
 import tempfile
 import threading
@@ -32,24 +33,33 @@ MODELOS_WHISPER = ["tiny", "base", "small", "medium", "large-v3"]
 PROVEDORES = ["openai", "deepseek"]
 
 
-def get_documents_folder() -> Path:
-    """Retorna a pasta 'Documentos' do usuário (funciona mesmo em Windows em português)."""
-    if sys.platform == "win32":
+# Dentro da pasta do projeto, para funcionar igual em Windows, macOS e Linux
+# (sem depender de onde cada SO coloca a pasta "Documentos").
+OUTPUT_DIR = PROJECT_DIR / "Transcricoes"
+
+
+def garantir_pasta_saida() -> Path:
+    """Verifica se a pasta de transcrições existe e aceita gravação, criando-a se preciso.
+
+    Roda antes de baixar/transcrever, para não perder minutos de processamento
+    e só descobrir no final que não dá para salvar o texto.
+    """
+    if OUTPUT_DIR.exists() and not OUTPUT_DIR.is_dir():
+        raise RuntimeError(f"Já existe um arquivo (não uma pasta) chamado {OUTPUT_DIR}.")
+    if not OUTPUT_DIR.exists():
         try:
-            import ctypes
+            OUTPUT_DIR.mkdir(parents=True)
+        except OSError as exc:
+            raise RuntimeError(f"Não foi possível criar a pasta {OUTPUT_DIR}: {exc}") from exc
+        print(f"Pasta de transcrições criada: {OUTPUT_DIR}")
 
-            CSIDL_PERSONAL = 5
-            SHGFP_TYPE_CURRENT = 0
-            buf = ctypes.create_unicode_buffer(260)
-            ctypes.windll.shell32.SHGetFolderPathW(None, CSIDL_PERSONAL, None, SHGFP_TYPE_CURRENT, buf)
-            if buf.value:
-                return Path(buf.value)
-        except Exception:
-            pass
-    return Path.home() / "Documents"
-
-
-OUTPUT_DIR = get_documents_folder() / "Transcricoes"
+    teste = OUTPUT_DIR / ".teste_gravacao"
+    try:
+        teste.write_text("ok", encoding="utf-8")
+        teste.unlink()
+    except OSError as exc:
+        raise RuntimeError(f"Sem permissão para gravar na pasta {OUTPUT_DIR}: {exc}") from exc
+    return OUTPUT_DIR
 
 
 class TextoRedirecionado:
@@ -278,7 +288,9 @@ class App:
                     )
                 print("Chave validada com sucesso.")
 
-            OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+            print("Verificando pasta de transcrições...")
+            garantir_pasta_saida()
+            print(f"Transcrições serão salvas em: {OUTPUT_DIR}")
 
             with tempfile.TemporaryDirectory(prefix="video_transcriber_") as tmp:
                 tmp_dir = Path(tmp)
@@ -371,11 +383,16 @@ class App:
             self._log(f"Chave {provider}: {mensagem}")
 
     def _abrir_pasta_saida(self):
-        OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-        if sys.platform == "win32":
-            os.startfile(OUTPUT_DIR)
-        else:
-            messagebox.showinfo("Pasta de transcrições", str(OUTPUT_DIR))
+        try:
+            garantir_pasta_saida()
+            if sys.platform == "win32":
+                os.startfile(OUTPUT_DIR)
+            elif sys.platform == "darwin":
+                subprocess.run(["open", str(OUTPUT_DIR)], check=True)
+            else:
+                subprocess.run(["xdg-open", str(OUTPUT_DIR)], check=True)
+        except Exception as exc:
+            messagebox.showinfo("Pasta de transcrições", f"{OUTPUT_DIR}\n\n({exc})")
 
 
 def main():

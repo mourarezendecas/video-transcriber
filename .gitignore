@@ -10,5 +10,6 @@ __pycache__/
 # (podem conter vídeos, áudios e transcrições de conteúdo do usuário)
 input/*
 output/*
+Transcricoes/
 !input/.gitkeep
 !output/.gitkeep

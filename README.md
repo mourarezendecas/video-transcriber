@@ -56,10 +56,11 @@ janela. Vídeos mais longos podem demorar bastante — isso é esperado.
 ### 4. Pegar o resultado
 
 Quando terminar, aparece um aviso na tela com o caminho do arquivo. A
-transcrição final fica salva na pasta **Documentos\Transcricoes** do seu
-usuário do Windows. Você também pode clicar em **"Abrir pasta de
-transcrições"**, no canto inferior direito da janela, para chegar lá
-diretamente.
+transcrição final fica salva na pasta **Transcricoes**, dentro da pasta do
+próprio programa (a mesma pasta onde está o `gui.py`), em qualquer sistema
+(Windows, macOS ou Linux). A pasta é criada automaticamente se não existir.
+Você também pode clicar em **"Abrir pasta de transcrições"**, no canto
+inferior direito da janela, para chegar lá diretamente.
 
 > **Importante sobre privacidade:** se você usar um link do Google Drive, o
 > vídeo é baixado apenas temporariamente para processar o áudio, e é apagado
@@ -225,7 +226,7 @@ video-transcriber/
 - **Interface gráfica (`gui.py` / `iniciar.bat`)**: vídeo e áudio são
   processados numa pasta temporária que é apagada automaticamente ao final
   de cada transcrição — só o texto final é mantido, salvo em
-  `Documentos\Transcricoes`. Isso vale tanto para um arquivo baixado do
+  `Transcricoes/` dentro da pasta do projeto. Isso vale tanto para um arquivo baixado do
   Google Drive quanto para o áudio extraído de um arquivo local (o arquivo
   de vídeo local em si não é copiado nem apagado).
 - **Linha de comando (`main.py`)**: os vídeos (`input/`), áudios extraídos e
